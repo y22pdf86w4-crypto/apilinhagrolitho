@@ -18,8 +18,7 @@
     "helmet": "^7.1.0",
     "mssql": "^9.0.0",
     "jsonwebtoken": "^9.0.0",
-    "bcryptjs": "^2.4.3"
-      },
+    "bcrypt": "^5.0.0"      },
   "devDependencies": {
     "nodemon": "^2.0.20"
   }
