@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: apilinhagrolitho
+    env: node
+    nodeVersion: 18
+    buildCommand: yarn
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
