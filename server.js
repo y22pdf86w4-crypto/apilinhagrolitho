@@ -7,15 +7,19 @@ const { query } = require('./db');
 const { gerarToken, validarToken, verificarAdmin, validarCredenciais } = require('./auth');
 const usuarios = require('./usuarios');
 
+
 const app = express();
+
 
 // ==============================
 // 1. SEGURANÇA & CONFIG
 // ==============================
 
+
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+
 
 const limiter = rateLimit({ 
     windowMs: 15 * 60 * 1000, 
@@ -24,6 +28,7 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+
 const loginLimiter = rateLimit({ 
     windowMs: 15 * 60 * 1000, 
     max: 500,
@@ -31,11 +36,14 @@ const loginLimiter = rateLimit({
     message: { sucesso: false, erro: 'Bloqueado por tentativas excessivas.' }
 });
 
+
 // ==============================
 // 2. CONSTANTES & UTILS
 // ==============================
 
+
 const DATA_PADRAO = '2025-01-01';
+
 
 const IDS_BLOQUEADOS_LINHAGRO = [
   5, 22, 55, 78, 80, 97, 116, 122, 130, 137, 138, 140,
@@ -43,10 +51,12 @@ const IDS_BLOQUEADOS_LINHAGRO = [
 ];
 const IDS_BLOQUEADOS_SQL = IDS_BLOQUEADOS_LINHAGRO.join(',');
 
+
 function sanitizar(texto) {
     if (!texto || typeof texto !== 'string') return null;
     return texto.replace(/'/g, "''").replace(/;/g, "");
 }
+
 
 // Função de tratamento de data (Blindada contra arrays e formatos inválidos)
 function limparData(valor, padrao) {
@@ -62,46 +72,40 @@ function limparData(valor, padrao) {
     return typeof d === 'string' ? d.replace(/-/g, '') : padrao.replace(/-/g, '');
 }
 
+
 // ==============================
 // 3. ROTAS PÚBLICAS
 // ==============================
+
 
 app.get('/', (req, res) => {
   res.json({
     api: 'linhagro-v1.0',
     status: 'online',
     versao: '1.0.0',
-    seguranca: 'ativa',
-    timestamp: new Date().toISOString()
+    seguranca: 'ativa'
   });
 });
 
-// Health check para Render
-app.get('/health', async (req, res) => {
-  try {
-    await query('SELECT 1');
-    res.json({ status: 'healthy', db: 'connected', timestamp: new Date().toISOString() });
-  } catch (err) {
-    res.status(503).json({ status: 'unhealthy', db: 'disconnected', erro: err.message });
-  }
-});
 
 app.post('/api/linhagro/login', loginLimiter, async (req, res) => {
   try {
     const { usuario, senha } = req.body;
     if (!usuario || !senha) return res.status(400).json({ sucesso: false, erro: 'Dados obrigatórios' });
 
+
     const resultado = await validarCredenciais(usuario, senha);
     if (!resultado.valido) return res.status(401).json({ sucesso: false, erro: 'Credenciais inválidas' });
 
+
     const token = gerarToken(resultado.usuario, resultado.perfil);
     console.log(`[LOGIN] User: ${resultado.usuario} - IP: ${req.ip}`);
+
 
     res.json({
       sucesso: true,
       usuario: resultado.usuario,
       token,
-      perfil: resultado.perfil,
       expiracao: '7d'
     });
   } catch (err) {
@@ -110,9 +114,11 @@ app.post('/api/linhagro/login', loginLimiter, async (req, res) => {
   }
 });
 
+
 // ==============================
 // 4. DASHBOARD (LINHAGRO)
 // ==============================
+
 
 app.get('/api/linhagro/resumo-geral', validarToken, async (req, res) => {
   try {
@@ -224,10 +230,11 @@ app.get('/api/linhagro/resumo-geral', validarToken, async (req, res) => {
     res.status(500).json({
       sucesso: false,
       erro: 'Erro ao processar resumo geral Linhagro.',
-      detalhe: process.env.NODE_ENV === 'development' ? err.message : undefined
+      detalhe: err.message
     });
   }
 });
+
 
 app.get('/api/linhagro/evolucao', validarToken, async (req, res) => {
     try {
@@ -297,10 +304,11 @@ app.get('/api/linhagro/evolucao', validarToken, async (req, res) => {
         res.status(500).json({ 
             sucesso: false, 
             erro: 'Erro ao gerar evolução Linhagro.',
-            detalhe: process.env.NODE_ENV === 'development' ? err.message : undefined
+            detalhe: err.message 
         }); 
     }
 });
+
 
 app.get('/api/linhagro/distribuicao', validarToken, async (req, res) => {
     try {
@@ -348,10 +356,11 @@ app.get('/api/linhagro/distribuicao', validarToken, async (req, res) => {
         res.status(500).json({ 
             sucesso: false, 
             erro: 'Erro ao gerar distribuição Linhagro.',
-            detalhe: process.env.NODE_ENV === 'development' ? err.message : undefined
+            detalhe: err.message 
         }); 
     }
 });
+
 
 app.get('/api/linhagro/filtros', validarToken, async (req, res) => {
     try {
@@ -371,9 +380,10 @@ app.get('/api/linhagro/filtros', validarToken, async (req, res) => {
         });
     } catch (err) { 
         console.error('Erro ao carregar filtros Linhagro:', err);
-        res.status(500).json({ sucesso: false, erro: 'Erro ao carregar filtros Linhagro.' }); 
+        res.status(500).json({ erro: 'Erro ao carregar filtros Linhagro.' }); 
     }
 });
+
 
 app.get('/api/linhagro/historico-global', validarToken, async (req, res) => {
     try {
@@ -438,9 +448,11 @@ app.get('/api/linhagro/historico-global', validarToken, async (req, res) => {
     }
 });
 
+
 // ==============================
 // 5. ADMIN (USUÁRIOS)
 // ==============================
+
 
 app.post('/api/linhagro/admin/usuarios', validarToken, verificarAdmin, async (req, res) => {
     try {
@@ -465,12 +477,14 @@ app.post('/api/linhagro/admin/usuarios', validarToken, verificarAdmin, async (re
     }
 });
 
+
 app.get('/api/linhagro/admin/usuarios', validarToken, verificarAdmin, async (req, res) => {
     try { 
         const lista = await usuarios.listarUsuarios(); 
         res.json({sucesso:true, usuarios: lista}); 
     } catch(err) { res.status(500).json({erro: 'Erro ao listar usuários.'}); }
 });
+
 
 app.put('/api/linhagro/admin/usuarios/:usuario/desativar', validarToken, verificarAdmin, async (req, res) => {
     try { 
@@ -480,27 +494,16 @@ app.put('/api/linhagro/admin/usuarios/:usuario/desativar', validarToken, verific
     } catch(err) { res.status(500).json({erro: 'Erro ao desativar usuário.'}); }
 });
 
-// ==============================
-// 6. ERROR HANDLING
-// ==============================
-
-app.use((req, res) => {
-  res.status(404).json({ sucesso: false, erro: 'Rota não encontrada' });
-});
 
 // ==============================
-// 7. START SERVER (RENDER COMPATIBLE)
+// 6. START
 // ==============================
+
 
 const PORT = process.env.PORT || 3001;
-
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n=== API LINHAGRO v1.0 ===`);
-  console.log(`✅ Servidor rodando na porta ${PORT}`);
-  console.log(`📡 Ambiente: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔐 JWT Secret: ${process.env.JWT_SECRET ? 'configurado' : 'EM BRANCO - USE .env'}`);
-  console.log(`📊 DB Server: ${process.env.DB_SERVER || 'não configurado'}`);
-  console.log(`\nAcesse: http://SEU_IP:${PORT}\n`);
+  console.log(`\n=== API LINHAGRO v1.0 ===\nRodando em http://0.0.0.0:${PORT}\nAcesse: http://SEU_IP:${PORT}\n`);
 });
+
 
 module.exports = app;
